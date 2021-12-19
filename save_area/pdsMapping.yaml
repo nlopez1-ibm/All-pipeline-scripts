@@ -1,0 +1,15 @@
+# IBM SAMPLE:  Target deploy properties for DVL (SAMPLE)
+## Put this in the apps repo under applicaiton-conf/folder 
+---
+deploy:
+  cics.cicsplex: DCICS????
+  cics.cmciport: 1490
+  bind.maxrc: 0
+  bind.confdir: /u/jyvesb/ispf ????
+  bind.user: JENKINS
+  bind.package: GENASA1????
+  bind.qualifier: GENADB0????
+  bind.subsys: DBC1????
+  pds.mapping: |-
+    *.LOAD,DVL.TEAM.LOADLIB
+    *.DBRM,DVL.TEAM.DBRM   
