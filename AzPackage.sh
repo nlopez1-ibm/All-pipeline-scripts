@@ -6,8 +6,6 @@
 ##  $2 ver#    
 ##   TEST RESULTS: PASSED 
 ## add ip to /etc/host... 
-
-
 clear 
 . /u/nlopez/.profile
 
