@@ -9,7 +9,7 @@ import com.ibm.dbb.build.report.records.DefaultRecordFactory
 import groovy.transform.*
 
 
-// NJL added for trace 
+// NJL added for trace Plus may some mods needed on my zDT env.   
 import groovy.json.*
 
 
@@ -52,11 +52,11 @@ import groovy.json.*
  ************************************************************************************/
 
 // start create & publish package
-
-
-println "TRACE- NJL - args -> $args"
-@Field Properties props = parseInput(args)
-//Properties props = parseInput(args)
+//njl - TODO:  fix "No such property: args for class: PackageBuildOutputs"
+//println "TRACE- NJL - args -> $args" 
+props = new Properties()
+//@Field Properties props = parseInput(args)
+props =  parseInput(args)
 
 
 
@@ -86,6 +86,11 @@ if(!jsonOutputFile.exists()){
 }
 
 def buildReport= BuildReport.parse(new FileInputStream(jsonOutputFile))
+
+//println "***TRACE- NJL - buildrpt "   	
+//println new JsonBuilder(buildReport).toPrettyString()	
+
+
 
 // finds all the build outputs with a deployType
 def executes= buildReport.getRecords().findAll{
@@ -130,10 +135,21 @@ else {
 		} catch (Exception e){}
 	}
 
-	def String tarFileLabel = buildInfo[0].label
-	def String tarFileName = (props.tarFileName) ? props.tarFileName : "${buildInfo[0].label}.tar"
-	def String buildGroup = buildInfo[0].group
 
+	
+//NJL - not sure what record[0] is but think it the header and I dont see the label or group props in my test. made them null
+	 
+	
+	//def String tarFileLabel = buildInfo[0].label
+	def String tarFileLabel = null
+			
+	def String tarFileName = (props.tarFileName) ? props.tarFileName : "${buildInfo[0].label}.tar"
+		
+	//def String buildGroup = buildInfo[0].group
+		def String buildGroup = null
+
+		
+		
 
 	//Create a temporary directory on zFS to copy the load modules from data sets to
 	def tempLoadDir = new File("$props.workDir/tempPackageDir")
@@ -298,8 +314,12 @@ def parseInput(String[] cliArgs){
 		System.exit(0)
 	}
 
-	def props = new Properties()
+	
+// njl moved to init @ top of this script	
+//	def props = new Properties()
 
+	
+	
 	// set command line arguments
 	if (opts.w) props.workDir = opts.w
 	if (opts.d) props.deployTypeFilter = opts.d
@@ -318,8 +338,6 @@ def parseInput(String[] cliArgs){
 		}
 	}
 
-//println new JsonBuilder(props).toPrettyString()	
- 	
 	
 	// validate required props
 	try {
