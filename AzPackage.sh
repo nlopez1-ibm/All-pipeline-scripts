@@ -1,11 +1,11 @@
 #!/bin/sh
-##  Demo publish a tar file  to Art'y
+##  Demo publish a tar file  to Art'y  (NLopez)
 ##  Note my Arty_ID_Tok is def in .profile
 ##  on zDT can use DNS to arty Server using its IP=169.50.87.2  #eu.artifactory.swg-devops.com
 ##  $1 is the local tar file  (Fully qualified path)
 ##  $2 ver#    
 ##   TEST RESULTS: PASSED 
-## add ip to /etc/host... 
+##   TODO add ip to /etc/host... 
 clear 
 . /u/nlopez/.profile
 
@@ -14,9 +14,9 @@ v=$2
 r=https:/169.50.87.2/artifactory/sys-dat-team-generic-local
 
 
-## PUBLISH with Curl  Note: versbose gens stderr and fails a pipeline
+## PUBLISH with Curl  Note: verbose gens stderr and fails a pipeline so redirecting it
+## Get the get from Jfron Home page
 echo "" ; echo "" ; echo "***   PUBLISHING $1"
-#curl --insecure -verbose -H X-JFrog-Art-Api:$Arty_ID_Tok -T $t  $r/AzDBB/zDT/mytar_$v.tar > curl.log 2>&1 
 curl --insecure -H X-JFrog-Art-Api:$Arty_ID_Tok -T $t  $r/AzDBB/zDT/mytar_$v.tar > curl.log 2>&1
 cat curl.log  
   
