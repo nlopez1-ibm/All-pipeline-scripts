@@ -1,12 +1,16 @@
 #!/bin/sh
 ## Az/DBB Demo- DBB Build v1.2 (njl) ++ zdt daemon
+## ADDED $6 TO CAPTURE $BID
+## Added support for new -re and -v option to gen cross repo impact audit rpt
+##       see app-conf/app/pro for property reportExternal...
+  
 
 . /u/nlopez/.profile
 
 WorkDir=$1
 WorkSpace=$2
 App=$3
-BuildMode="$4 $5" #DBB Build modes:  --impactBuild,  --reset, --fullBuild, '--fullBuild --scanOnly'
+BuildMode="$4 $5 $6 $7 " #DBB Build modes:  --impactBuild,  --reset, --fullBuild, '--fullBuild --scanOnly'
 
 cd $WorkDir
 zAppBuild=$HOME/dbb-zappbuild/build.groovy

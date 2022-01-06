@@ -62,7 +62,8 @@ props =  parseInput(args)
 
 // Map of last level dataset qualifier to DBB CopyToFS CopyMode.
 // TODO: Customize to your needs. 
-def copyModeMap = ["COPYBOOK": CopyMode.TEXT, "COPY": CopyMode.TEXT, "DBRM": CopyMode.BINARY, "LOAD": CopyMode.LOAD]
+// NJL ADDED CICSLOAD
+def copyModeMap = ["COPYBOOK": CopyMode.TEXT, "COPY": CopyMode.TEXT, "DBRM": CopyMode.BINARY, "LOAD": CopyMode.LOAD, "CICSLOAD": CopyMode.LOAD]
 
 
 def startTime = new Date()
@@ -160,15 +161,20 @@ else {
 	def loadDatasetToMembersMap = [:]
 	def loadCount = 0
 	executes.each { execute ->
-		execute.outputs.each { output ->
-			def (dataset, member) = output.dataset.split("\\(|\\)")
-			if (loadDatasetToMembersMap[dataset] == null)
-				loadDatasetToMembersMap[dataset] = []
-			loadDatasetToMembersMap[dataset].add(member)
-			loadCount++
+		execute.outputs.each { output ->		
+		
+			// njl  - find the member in parenthesis - if its an ibecopy cmd this fails with an index error. Added try/catch   
+			try {  
+					def (dataset, member) = output.dataset.split("\\(|\\)")
+					if (loadDatasetToMembersMap[dataset] == null) loadDatasetToMembersMap[dataset] = []							
+					loadDatasetToMembersMap[dataset].add(member)
+					loadCount++
+			}
+			catch (Exception e) {
+					println "**! Skipping unsupported output dataset type. Missing member name in $output.dataset"
+			}			 
 		}
-	}
-
+	}	
 	//For each load modules, use CopyToHFS with option 'CopyMode.LOAD' to maintain SSI
 	println("** Copying BuildOutputs to temporary package dir.")
 

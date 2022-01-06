@@ -3,12 +3,6 @@ import com.ibm.dbb.build.*
 import com.ibm.dbb.build.DBBConstants.CopyMode
 import groovy.transform.*
 
-// njl Jan 2022 - revisited and testing with new CI scripts
-// Invoked by AzDeploy.sh
-// PreReq: download the tar file to a local workiDir 
-
-
-
 // define script properties
 @Field def yamlUtils = loadScript(new File("YamlUtilities.groovy"))
 def props = parseInput(args)
@@ -52,7 +46,7 @@ def deployApplicationPackage (String workDir, String tarFile) {
 	def loadOptions = "cyl space(1,15) dsorg(PO) recfm(U) blksize(32760) dsntype(library) msg(1)"
 
 	def copy = new CopyToPDS()
-	def copyModeMap = ["NCAL": CopyMode.LOAD, "LOAD": CopyMode.LOAD, "CICSLOAD": CopyMode.LOAD, "IMS_LOAD": CopyMode.LOAD, "DBRM": CopyMode.BINARY]
+	def copyModeMap = ["NCAL": CopyMode.LOAD, "LOAD": CopyMode.LOAD, "CICS_LOAD": CopyMode.LOAD, "IMS_LOAD": CopyMode.LOAD, "DBRM": CopyMode.BINARY]
 	def targetDataset = null;
 
 	def deploymentUnitsBlock = { unit ->
