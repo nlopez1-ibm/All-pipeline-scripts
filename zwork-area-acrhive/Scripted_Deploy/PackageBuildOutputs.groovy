@@ -12,7 +12,7 @@ import groovy.transform.*
 // NJL added for trace Plus made some mods needed on my zDT env.   
 import groovy.json.*
 
-
+/* UCD Version */
 
 /************************************************************************************
  * This script creates a simplified package with the outputs generated from a DBB build 

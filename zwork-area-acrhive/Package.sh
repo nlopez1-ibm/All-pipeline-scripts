@@ -1,5 +1,5 @@
 #!/bin/sh
-##  Demo publish a tar file  to Art'y  (NLopez)
+##  Demo publish a tar file  to Art'y  using Rocket's Curl tool (NLopez)
 ##  Note my Arty_ID_Tok is def in .profile
 ##  on zDT can use DNS to arty Server using its IP=169.50.87.2  #eu.artifactory.swg-devops.com
 ##  $1 is the local tar file  (Fully qualified path)

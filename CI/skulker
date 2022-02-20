@@ -1,0 +1,352 @@
+#!/bin/sh
+# NJL Mod- moved to /bin on zDT
+# /****PROPRIETARY_STATEMENT******************************************/ 
+# /*                                                                 */ 
+# /*                                                                 */ 
+# /* LICENSED MATERIALS - PROPERTY OF IBM                            */
+# /* 5650-ZOS COPYRIGHT IBM CORP. 2000,2015                          */ 
+# /*                                                                 */ 
+# /* STATUS= HOT77A0                                                 */ 
+# /*                                                                 */ 
+# /****END_OF_PROPRIETARY_STATEMENT***********************************/ 
+#
+# Skulker
+# Remove files from <directory> (first argument) that are equal to or 
+#   older than <days_old> (second argument).
+# See the UNIX System Services Command Reference book for the complete
+#   skulker documentation.
+#   https://www.ibm.com/docs/en/zos/2.2.0?topic=descriptions-skulker-remove-old-files-from-directory
+#
+# NOTE: This file can be modified to suit your particular needs.
+#
+# Restriction:	
+#	This script ignores pathnames containing single-quotes or 
+#   newlines.
+#
+#  Change Activity:
+#  FLAG REASON    RELEASE  DATE   CHANGE DESCRIPTION
+#  ---- --------  -------  ------ ------------------
+#  N/A  OA16107   HOT7709  060426 Updated to handle blanks in filenames.
+#  $A1  ME16980   HOT7770  090805 Provide new option to delete subdirs and fix
+#                                 some other problems as well, relates to OA29998 UR1.
+#  $A2  OA48248   HOT7780  150625 Ignore all files and subdirs which path names 
+#                                 contain single quotes or newlines.
+#
+ 
+# Disable pathname expansion, so we can handle filenames containing special characters.
+set -o noglob
+ 
+# This function displays the usage message.
+Usage()
+{
+   print -u2 "Usage: skulker [-iw] [-r|R] [-l logfile] <directory> <days_old>"  # @A1C
+   exit 2 
+}
+ 
+# This function appends a text string to the user-specified log file 
+# (for use with -l)
+# The first parameter is the text to be written to the file.
+# Note that if $logfile exists, previous data is not overwritten.
+PrintToLog()
+{
+   if [ -n "$lflag" ]; then
+      print "$1" >> $logfile
+   fi
+}
+ 
+# This function handles printing of error messages.  
+# The parameter sent to the function is the error message to be 
+# displayed.   This error is also written to the log file 
+# if -l was specified.
+PrintError()
+{
+	print -u2 "$1"
+	PrintToLog "$1"
+} 
+ 
+# This function finds candidate files and sub directories in the 
+# given directory for deletion.
+# The parameter send to the function is the path name of directory
+# and the number of days.                                          @A2A
+FindFiles() {                                                    # @A2A
+   # Find objects that are candidates for deletion in current directory and 
+   # add them to the deletion list.                                                    @A2A
+   # If -R option is set, the deletion list contain subdirectories.                    @A2A
+   if [ -n "$Rflag" ]; then              # -R was specified                            @A2A
+      ifiles=$(find "$1" -atime +$2 -level 0 ! -name "$1" ! -name "*'*" ! -name "*
+*" -print | sed " s/^/'/; s/$/'/")                                                   # @A2A
+   else                                  # -r was specified                            @A2A
+      ifiles=$(find "$1" -atime +$2 -level 0 ! -type d ! -name "*'*" ! -name "*
+*" -print | sed " s/^/'/; s/$/'/")                                                   # @A2A
+   fi                                                                                # @A2A
+   rc=$?                                                                             # @A2A
+   # If an error occurred, then print error message and quit.                          @A2A
+   if [ $rc -ne 0 ]; then                                                            # @A2A
+      PrintError "find command in $1 returned non-zero exit status: $rc"             # @A2A
+      exit $rc                                                                       # @A2A
+   fi                                                                                # @A2A
+   # Add the new objects to the deletion list.                                         @A2A
+   if [ -n "$files" -a -n "$ifiles" ]; then                                          # @A2A
+      files=${files}${newline}${ifiles}                                              # @A2A
+   elif [ -n "$ifiles" ]; then                                                       # @A2A
+      files=${ifiles}                                                                # @A2A
+   fi                                                                                # @A2A
+ 
+   # Find subdirectories in current directory.                                         @A2A
+   Pdirs=$(find "$1" -level 0 ! -name "$1" -type d ! -name "*'*" ! -name "*
+*" -print)                                                                          # @A2A
+   rc=$?                                                                             # @A2A
+   # If an error occurred, then print error message and quit.                          @A2A
+   if [ $rc -ne 0 ]; then                                                            # @A2A
+      PrintError "find subdirectory in $1 returned non-zero exit status: $rc"        # @A2A
+      exit $rc                                                                       # @A2A
+   fi                                                                                # @A2A
+ 
+   # Continue to find in subdirectories.                                               @A2A
+   for dir in $Pdirs                                                                 # @A2A
+     do                                                                              # @A2A
+       FindFiles "$dir" "$2"                                                         # @A2A
+     done                                                                            # @A2A
+}                                                                                    # @A2A
+ 
+# Process arguments (-i, -l, -r, -R, -w and -?)                    @A1C
+while getopts il:rRw\? opt
+do
+case $opt in
+i)  iflag=1;;
+l)  lflag=1
+    logfile="$OPTARG";;
+r)  rflag=1
+    if [ -n "$Rflag" ]; then # If -R also set, send Usage and exit @A1A
+      Usage                                                      # @A1A
+    fi                                                           # @A1A
+    ;; 
+R)  Rflag=1                                                      # @A1A
+    if [ -n "$rflag" ]; then # If -r also set, send Usage and exit @A1A
+      Usage                                                      # @A1A
+    fi                                                           # @A1A
+    ;; 
+w)  wflag=1;; 
+\?) Usage ;;
+*)  PrintError "$0: unknown option $OPTARG"
+    Usage ;;
+esac
+done
+ 
+# shift positional parameters
+shift OPTIND-1
+ 
+# Check user entered proper number of arguments.
+if [ $# -ne 2 ]; then
+	Usage
+fi
+ 
+PrintToLog "skulker run on $(date)"
+ 
+# Check that user entered a directory
+if [ ! -d "$1" ]; then                                           # @A1C
+	PrintError "$1 is not a directory."
+	exit 1
+fi
+ 
+# check the path name of the entered directory doesn't contain single
+# quotes or newlines                                               @A2A
+if [ "$1" != "${1#*\'}" -o "$1" != "${1#*
+}" ]; then
+	PrintError "The path name of $1 contains single quotes or newlines characters, no files will be deleted."
+	exit 1
+fi
+ 
+# Change field splitting to use newline only.  The default IFS
+# contains blank, tab and newline.                                 @A2A
+IFS="
+"
+ 
+# Find files older than specified day ignoring those with single
+#  quotes or newlines in the name.                                 @A1C
+# sed is used as follows:
+# To handle filenames with blanks or tabs:
+#    prepend single-quote to start of string:  s/^/'/
+#    append single-quote to end of string:   s/$/'/
+# The newline in following find requests is deliberate.            @A1C
+ 
+# Set other find options based on -r or -R flag.                   @A1C
+# Ignore path names that contain single quotes or newlines
+# when determining the list of objects for deletion.               @A2A
+if [ -n "$rflag" -o -n "$Rflag" ]; then                          # @A2A 
+   # Define variables                                              @A2A
+   newline="
+"                                      # newline character         @A2A
+   files=""                                                      # @A2A
+   # Call FindFiles to generate the list for deletion.             @A2A        
+   FindFiles "$1" "$2"                                           # @A2A
+else   
+   # Only get files from top level, in addition to other common opts@A1A
+   files=$( find "$1" -atime +$2 -type f -level 0 ! -name "*'*" ! -name "*
+*" -print | sed " s/^/'/; s/$/'/" )                              # @A1A
+   rc=$?
+   # If an error occured, then print error message and quit.
+   if [ $rc -ne 0 ]; then
+      PrintError "find command returned non-zero exit status: $rc"
+      exit $rc 
+   fi
+fi
+ 
+# If no files are found, then quit.
+if [ -z "$files" ]; then
+   PrintToLog "No files found older than specified date.  Nothing removed."
+   exit 1
+fi 
+ 
+# Was -i option specified?
+if [ -n "$iflag" ]; then
+ 
+   # double-check with user.  Ensure only show information about
+   #  a directory (not its children).                              @A1C
+   eval ls -ld $files                                            # @A1C
+   if [ -n "$wflag" ]; then
+      echo "Do you really want to send warnings to the owners of these files?"
+   else
+      echo "Do you really want to delete these files?"
+   fi
+   echo "If yes, answer [y|Y]."
+   echo "Any other response cancels your request."
+   read response
+   if [ -n "$response" ]; then
+      case "$response" in
+      y|Y) 
+         if [ -n "$wflag" ]; then  
+            print "Sending warnings..." 
+         else
+            print "Deleting files..." 
+         fi ;;
+      *)
+         PrintError "Request cancelled."
+         exit 1 ;;
+      esac
+   else 
+      PrintError "Request cancelled."
+      exit 1 
+   fi
+ 
+fi   # if iflag was specified
+ 
+# Was -w option specified?
+if [ -n "$wflag" ]; then
+   for file in $files
+   do
+      #  Determine owner of the object (ensure only show information  
+      #   about a directory when doing this determination).        @A1C
+      user=$(eval ls -ld $file | awk ' $0!="" { print $3 } ')    # @A1C
+      messagebody="$file will be deleted because it has not \
+been accessed in $2 days or more.  \
+Please take appropriate action \
+if you would like to keep this file."
+      echo $messagebody | mailx -s "WARNING: file $file to be deleted" $user
+   done
+   PrintToLog "Sent warnings on $(date) for files: \n$files"
+else   # Remove the files (including read-only files.)
+  if [ -z "Rflag" ]; then # If -R was not specified, then do ..    @A1A
+   if [ -x /bin/fuser ]; then
+      PrintToLog "Files removed on $(date):"
+      for file in $files
+      do
+         if [ -z $( eval /bin/fuser $file 2>/dev/null ) ]; then
+            eval rm -f $file                                     # @A1C
+            rc=$?
+            if [ $rc -ne 0 ]; then
+               PrintError "Error occurred during remove of $file. Return code=$rc."
+            else
+               PrintToLog "$file"
+            fi
+         else
+            PrintError "$file is in use, not removed."
+         fi
+      done
+   else
+      eval rm -f $files                                          # @A1C
+      rc=$?
+      if [ $rc -ne 0 ]; then
+         PrintError "Error occurred during remove. Return code=$rc."
+         exit $rc
+      else
+         PrintToLog "Files removed on $(date):\n$files"
+      fi
+   fi 
+ else  # -R was specified                                          @A1A
+   dirs=""                                  # list of directories  @A1A
+   newline="
+"                                           # newline character    @A1A
+   PrintToLog "Files removed on $(date):"                        # @A1A
+   # Loop over list of names, remove files and put directory names in
+   #  new variable for later processing.                           @A1A
+   for file in $files                                            # @A1A
+     do                                                          # @A1A
+       # Strip off leading and ending single quotes, so can use the
+       #  -d test check to determine if object is a directory.     @A1A
+       stripfile=$(echo $file | sed "s/^'//; s/'$//")
+       if [ -d "$stripfile" ]; then     # Is the object a dir?     @A1A
+         # Add to list of dirs, put file in front to sort bottom up as
+         #  find returns things in top down order.                 @A1A
+         dirs=${file}${newline}${dirs}                           # @A1A
+       else                             # for non-dir objects      @A1A
+         if [ -x /bin/fuser ]; then     # Is fuser executable?     @A1A
+           if [ -z $( eval /bin/fuser $file 2>/dev/null ) ]; then #@A1A
+             eval rm -f $file           # Remove the file          @A1A
+             rc=$?                      # Save the return code     @A1A
+             if [ $rc -ne 0 ]; then     # Any errors?              @A1A
+               PrintError "Error occurred during remove of $file. Return code=$rc."
+             else                       # Successful remove        @A1A
+               PrintToLog "$file"                                # @A1A
+             fi                                                  # @A1A
+           else                         # Object in use            @A1A
+             PrintError "$file is in use, not removed."          # @A1A
+           fi                                                    # @A1A
+        else                            # fuser is not executable  @A1A
+          eval rm -f $file              # Remove the file          @A1A
+          rc=$?                         # Save the return code     @A1A
+          if [ $rc -ne 0 ]; then        # Any errors?              @A1A
+            PrintError "Error occurred during remove of $file. Return code=$rc."
+          else                          # Successful remove        @A1A
+            PrintToLog "$file"                                   # @A1A
+          fi                                                     # @A1A
+        fi                              # End of If/Else on fuser  @A1A 
+      fi                                # End of If/Else on obj    @A1A
+    done                                # End of do over files     @A1A
+ 
+   # Now process the directories, if any                           @A1A
+   if [ -n "$dirs" ]; then                                       # @A1A
+     for dir in $dirs                                            # @A1A
+       do                                                        # @A1A
+         # Determine if directory is empty so can remove           @A1A
+         if [ $(eval ls -A1 $dir | wc -l) -eq 0 ]; then # empty dir@A1A
+           if [ -x /bin/fuser ]; then     # Does fuser exist?      @A1A
+             # Determine if object is in use                       @A1A
+             if [ -z $( eval /bin/fuser $dir 2>/dev/null ) ]; then # @A1A
+               eval rmdir $dir            # remove the directory   @A1A
+               rc=$?                      # Save the return code   @A1A
+               if [ $rc -eq 0 ]; then     # Was it a success?      @A1A
+                 PrintToLog "$dir"                               # @A1A
+               else                       # All other errors       @A1A
+                 PrintError "Error occurred during remove of $dir. Return code=$rc."
+               fi                                                # @A1A
+             else                                                # @A1A
+               PrintError "$dir is in use, not removed."         # @A1A
+             fi                                                  # @A1A
+           else                           # fuser does not exist   @A1A
+             eval rmdir $dir              # Remove the directory   @A1A
+             rc=$?                        # Save the return code   @A1A
+             if [ $rc -eq 0 ]; then       # Was it a success?      @A1A
+               PrintToLog "$dir"                                 # @A1A
+             else                         # All other errors       @A1A
+               PrintError "Error occurred during remove of $dir. Return code=$rc."
+             fi                                                  # @A1A
+           fi                             # End if fuser exists    @A1A
+         else                           # Directory has objects    @A1A
+           PrintToLog "$dir contains objects, not removed."      # @A1A
+         fi                             # End of empty dir check   @A1A
+       done                             # End of do over dirs      @A1A
+   fi                                   # End of dirs to process   @A1A    
+ fi    # End If/else check on -R setting or not                    @A1A                                      
+ 
+fi # if wflag

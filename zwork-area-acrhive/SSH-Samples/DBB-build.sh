@@ -1,6 +1,8 @@
 #!/bin/sh
 ## IBM Sample Demo- DBB Build v1.2 (njl)
-. $HOME/.profile
+. /u/nlopez/.profile
+
+
 MyWorkDir=$1 ; cd $MyWorkDir
 MyWorkSpace=$2
 MyApp=$3
@@ -17,6 +19,10 @@ echo "**                         DBB_HOME:" $DBB_HOME
 echo "** "
 echo " ** Git Status  for MyWorkSpace:"  
 git -C $MyWorkSpace status  
+
+ls -las
+ 
+
 groovyz $zAppBuild  --workspace $MyWorkSpace --application $MyApp  -outDir . --hlq $USER  --logEncoding UTF-8  $BuildMode
 
 if [ "$?" -ne "0" ]; then

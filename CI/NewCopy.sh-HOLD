@@ -1,0 +1,22 @@
+#!/bin/sh
+# NewCopy CICS modules in a deplyment package(njl)
+. /u/nlopez/.profile
+
+workDir=$1 ; cd $workDir
+appYaml=$workDir/tempDeploy/$2 
+
+
+echo "**************************************************************"
+echo "**     Started:  CICS NewCopy on HOST/USER: $(uname -Ia)/$USER"
+echo "**                           workDir:" $PWD
+echo "**                          App Yaml:" $appYaml  
+echo "** "
+
+NewCopy=/u/nlopez/All-pipeline-scripts/utilities/NewCopy.groovy
+
+groovyz $NewCopy  -w $workDir -y $appYaml  
+
+if [ "$rc" -ne "0" ]; then
+ echo "CICS NewCopy Error. Check the log for details. RC=$rc"
+ exit $rc
+fi
